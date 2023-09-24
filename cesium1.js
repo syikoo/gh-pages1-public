@@ -50,19 +50,19 @@ const czml=[
       "cartographicDegrees": [
         139.71927000000002,
         35.6276,
-        20,
+        60,
         139.71933,
         35.627750000000006,
-        20,
+        60,
         139.71943000000002,
         35.627970000000005,
-        20,
+        60,
         139.71946,
         35.62802000000001,
-        20,
+        60,
         139.61953000000002,
         35.52816,
-        20
+        60
       ]
     }
   },
@@ -87,19 +87,19 @@ const czml=[
       "cartographicDegrees": [
         139.73542,
         35.596410000000006,
-        30,
+        60,
         139.73547000000002,
         35.59653,
-        30,
+        60,
         139.73583000000002,
         35.596450000000004,
-        30,
+        60,
         139.73614,
         35.59635,
-        30,
+        60,
         139.63643,
         35.496270000000004,
-        30
+        60
      ]
     }
   },
@@ -122,3 +122,8 @@ const czml=[
 const dataSourcePromise = Cesium.CzmlDataSource.load(czml);
 viewer.dataSources.add(dataSourcePromise);
 viewer.zoomTo(dataSourcePromise);
+
+const uczml = 'https://syikoo.github.io/gh-pages1/tmp.czml';
+const dataSourcePromise1 = Cesium.CzmlDataSource.load(uczml);
+viewer.dataSources.add(dataSourcePromise1);
+viewer.zoomTo(dataSourcePromise1);
