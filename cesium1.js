@@ -119,6 +119,7 @@ const czml=[
 }
 ];
 
+
 const dataSourcePromise = Cesium.CzmlDataSource.load(czml);
 viewer.dataSources.add(dataSourcePromise);
 viewer.zoomTo(dataSourcePromise);
