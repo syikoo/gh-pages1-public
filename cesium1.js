@@ -36,7 +36,7 @@ viewer.scene.camera.setView({
 Sandcastle.addDefaultToolbarButton("log", function () {
 console.log('log');
 });
-
+/*
 const czml=[
 {
   "id": "document",
@@ -119,10 +119,10 @@ const czml=[
 }
 ];
 
-
 const dataSourcePromise = Cesium.CzmlDataSource.load(czml);
 viewer.dataSources.add(dataSourcePromise);
 viewer.zoomTo(dataSourcePromise);
+*/
 
 const uczml = 'https://syikoo.github.io/gh-pages1/tmp.czml';
 const dataSourcePromise1 = Cesium.CzmlDataSource.load(uczml);
