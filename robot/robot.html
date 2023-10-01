@@ -34,11 +34,16 @@ document.addEventListener("DOMContentLoaded", function() {
     var engine = new BABYLON.Engine(canvas, true);
     var scene = new BABYLON.Scene(engine);
 
-
     //--------------------------------------------------------------------------------
     // 準備
-    var gridSize = { width: 20, height: 10 };
-    var boxSize = 2;
+    const FLOOR_WIDTH = 30;
+    const FLOOR_HEIGHT = 15;
+    const N_ROBOTS = 15;
+    const GRID_STEP = 1;
+    const BOX_SIZE = GRID_STEP * 0.9;
+    const MAX_TIME = 120;
+    const ANIM_TICK_MSEC = 300;
+    const ANIM_SPEED = 1;
 
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -54,23 +59,23 @@ document.addEventListener("DOMContentLoaded", function() {
     scene.clearColor = new BABYLON.Color3(0.8, 0.8, 0.8);
 
     // カメラの設定
-    var cameraTarget = new BABYLON.Vector3(20 * boxSize / 2, 0, 10 * boxSize / 2);
-    var camera = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 4, Math.PI / 4, 60, cameraTarget, scene);
+    var cameraTarget = new BABYLON.Vector3(FLOOR_WIDTH * GRID_STEP / 2, 0, FLOOR_HEIGHT * GRID_STEP / 2);
+    var camera = new BABYLON.ArcRotateCamera("Camera", 90 * Math.PI/180, 20*Math.PI/180, FLOOR_WIDTH*1.5, cameraTarget, scene);
     camera.attachControl(canvas, true);
 
     // 光源の設定
     new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
 
     // 床の定義
-    var floorData = new Array(gridSize.height).fill(0).map(() => new Array(gridSize.width).fill(1));
+    var floorData = new Array(FLOOR_HEIGHT).fill(0).map(() => new Array(FLOOR_WIDTH).fill(1));
 
-    for (let y = 0; y < gridSize.height; y++) {
-        for (let x = 0; x < gridSize.width; x++) {
+    for (let y = 0; y < FLOOR_HEIGHT; y++) {
+        for (let x = 0; x < FLOOR_WIDTH; x++) {
             if (floorData[y][x] === 1) {
-                let box = BABYLON.MeshBuilder.CreateBox(`box_${x}_${y}`, { size: boxSize*0.9 }, scene);
-                box.position.x = x * boxSize;
+                let box = BABYLON.MeshBuilder.CreateBox(`box_${x}_${y}`, { size: BOX_SIZE }, scene);
+                box.position.x = x * GRID_STEP;
                 box.position.y = 0;
-                box.position.z = y * boxSize;
+                box.position.z = y * GRID_STEP;
                 box.material = new BABYLON.StandardMaterial(`mat_${x}_${y}`, scene);
                 box.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
                 box.edgesWidth = 4.0;
@@ -82,11 +87,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // ロボットの定義
     var robots = [];
-    for (let i = 0; i < 10; i++) {
-        let robot = BABYLON.MeshBuilder.CreateBox(`robot_${i}`, { size: boxSize*0.9 }, scene);
-        robot.position.x = getRandomInt(0,19) * boxSize;
-        robot.position.y = boxSize * 1.1; // 上に少し浮かせる
-        robot.position.z = getRandomInt(0,10) * boxSize;
+    for (let i = 0; i < N_ROBOTS; i++) {
+        let robot = BABYLON.MeshBuilder.CreateBox(`robot_${i}`, { size: BOX_SIZE }, scene);
+        robot.position.x = getRandomInt(0, FLOOR_WIDTH) * GRID_STEP;
+        robot.position.y = GRID_STEP * 1.1; // 上に少し浮かせる
+        robot.position.z = getRandomInt(0, FLOOR_HEIGHT) * GRID_STEP;
         robot.material = new BABYLON.StandardMaterial(`robotMat_${i}`, scene);
         robot.material.diffuseColor = new BABYLON.Color3(1, 0, 0);
         robot.edgesWidth = 4.0;
@@ -101,13 +106,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // スライダの定義
     var slider = new BABYLON.GUI.Slider();
+    slider.top = "40px";
+    slider.left = "10px";
     slider.minimum = 0;
-    slider.maximum = 60;  // 0から60秒
+    slider.maximum = MAX_TIME;  // 0から60秒
     slider.value = 0;
     slider.height = "20px";
     slider.width = "200px";
-    slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_TOP;
+    slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_LEFT;
     advancedTexture.addControl(slider);
 
     // スライダーの値が変更されたときの動作
@@ -117,22 +124,26 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 開始ボタンの定義
     var startButton = BABYLON.GUI.Button.CreateSimpleButton("startButton", "Start");
-    startButton.width = 0.2;
-    startButton.height = "40px";
+    startButton.top = "0px";
+    startButton.left = "0px";
+    startButton.width = "50px";
+    startButton.height = "30px";
     startButton.color = "white";
-    startButton.background = "green";
-    startButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    startButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    startButton.background = "grey";
+    startButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_TOP;
+    startButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_LEFT;
     advancedTexture.addControl(startButton);
 
     // 終了ボタンの定義
     var endButton = BABYLON.GUI.Button.CreateSimpleButton("endButton", "End");
-    endButton.width = 0.2;
-    endButton.height = "40px";
+    endButton.top = "0px";
+    endButton.left = "60px";
+    endButton.width = "50px";
+    endButton.height = "30px";
     endButton.color = "white";
-    endButton.background = "red";
-    endButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    endButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    endButton.background = "grey";
+    endButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_TOP;
+    endButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_LEFT;
     advancedTexture.addControl(endButton);
 
     // 3Dメッシュ（例えば、平面）を作成して、上記のテクスチャを適用
@@ -143,12 +154,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // TextBlockを作成してテキストを設定
     var outputText = new BABYLON.GUI.TextBlock();
+    outputText.top = "90px";
+    outputText.left = "10px";
     outputText.text = "Initial Text";
     outputText.color = "white";
     outputText.fontSize = 24;
-    outputText.top = "-40%";  // 画面の上部にテキストを配置
-
-    // AdvancedDynamicTextureにTextBlockを追加
+    outputText.height = "30px";
+    outputText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_TOP;
+    outputText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_LEFT;
+    outputText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
     advancedTexture.addControl(outputText);
 
     // あるイベントや操作に応じてテキストを更新する関数
@@ -164,34 +178,37 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 開始・終了機能
     var intervalId = null;
-    startButton.onPointerUpObservable.add(function() {
+    startButton.onPointerUpObservable.add(animation_start);
+    function animation_start() {
         // 既存のインターバルがあればクリア
         if (intervalId) {
             clearInterval(intervalId);
         }
         intervalId = setInterval(function() {
             slider.value += 1;
-            if (slider.value >= 60) {
+            if (slider.value >= MAX_TIME) {
                 clearInterval(intervalId);  // 60秒に達したらインターバルを停止
             }
-        }, 1000);  // 1秒ごとに更新
-    });
+        }, ANIM_TICK_MSEC);  // 1秒ごとに更新
+    }
 
-    endButton.onPointerUpObservable.add(function() {
+    endButton.onPointerUpObservable.add(animation_top);
+    function animation_top() {
         if (intervalId) {
             clearInterval(intervalId);
         }
         slider.value = 0;  // スライダの値をリセット
-    });
+    }
 
     slider.onValueChangedObservable.add(function(value) {
-        var timePosition = value;  // スライダの値 = 時間の位置（秒数）
-
-        console.log("Time position changed to:", timePosition, "seconds");
-
-        // ここに、時間位置が変更されたときに実行する他の動作や関数を追加できます。
-        // 例：updateSceneBasedOnTimePosition(timePosition);
+        let timePosition = value;  // スライダの値 = 時間の位置（秒数）
+        timePosition = parseInt(timePosition);
+        animation_time_change(timePosition);
     });
+    function animation_time_change(timePosition) {
+        updateOutput(timePosition);
+        moveToTime(timePosition);
+    }
 
 
     // 使用例: console.logの代わりにupdateOutputを使用してテキストを更新
@@ -199,20 +216,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     //--------------------------------------------------------------------------------
     // Animation
-    const MAX_TIME = 60;
 
     function generateDummyMoveData() {
-        const robotCount = 10;
         // const possibleDeltas = [-2, -1, 0, 1, 2];
         const possibleDeltas = [-1, 0, 1];
-        const maxTime = 60;
 
         let moveData = {};
 
-        for (let t = 0; t <= maxTime; t++) {
+        for (let t = 0; t <= MAX_TIME; t++) {
             let dataForCurrentSecond = [];
 
-            for (let i = 0; i < robotCount; i++) {
+            for (let i = 0; i < N_ROBOTS; i++) {
                 let dx = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
                 let dy = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
 
@@ -240,12 +254,13 @@ document.addEventListener("DOMContentLoaded", function() {
             movesForCurrentSecond.forEach(move => {
                 let robot = robots[move.robotIndex];
                 // 移動先の予想位置を計算
-                let newX = robot.position.x + move.dx * boxSize;
-                let newZ = robot.position.z + move.dy * boxSize;
+                let newX = robot.position.x + move.dx * GRID_STEP;
+                let newZ = robot.position.z + move.dy * GRID_STEP;
 
                 // 移動先の位置が床のエリア内にあるかチェック
-                if (newX >= 0 && newX <= 20 * boxSize && newZ >= 0 && newZ <= 10 * boxSize) {
-                    moveRobotWithAnimation(robot, move.dx * boxSize, move.dy * boxSize);
+                if (newX >= 0 && newX <= FLOOR_WIDTH * GRID_STEP -GRID_STEP 
+                  && newZ >= 0 && newZ <= FLOOR_HEIGHT * GRID_STEP - GRID_STEP) {
+                    moveRobotWithAnimation(robot, move.dx * GRID_STEP, move.dy * GRID_STEP);
                 }
             });
         }
@@ -253,27 +268,31 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     function moveRobotWithAnimation(robot, dx, dy) {
-        let animX = new BABYLON.Animation("animX", "position.x", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-        let animZ = new BABYLON.Animation("animZ", "position.z", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        const FPS = 10;
+        const TICK_SEC = 0.5 * ANIM_TICK_MSEC / 1000;  // tickよりも早く完了させる
+        let animX = new BABYLON.Animation("animX", "position.x", FPS, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        let animZ = new BABYLON.Animation("animZ", "position.z", FPS, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
 
         let initialX = robot.position.x;
         let initialZ = robot.position.z;
 
         let keysX = [];
         keysX.push({ frame: 0, value: initialX });
-        keysX.push({ frame: 30, value: initialX + dx });
+        keysX.push({ frame: 1*TICK_SEC*FPS, value: initialX + dx });
 
         let keysZ = [];
         keysZ.push({ frame: 0, value: initialZ });
-        keysZ.push({ frame: 30, value: initialZ + dy });
+        keysZ.push({ frame: 1*TICK_SEC*FPS, value: initialZ + dy });
 
         animX.setKeys(keysX);
         animZ.setKeys(keysZ);
 
         robot.animations = [];
         robot.animations.push(animX, animZ);
-        scene.beginAnimation(robot, 0, 30, false);
+        scene.beginAnimation(robot, 0, 1*FPS, false, ANIM_SPEED);
     }
+
+    animation_start();
 
 
     engine.runRenderLoop(function() {
