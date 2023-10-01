@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function() {
     var engine = new BABYLON.Engine(canvas, true);
     var scene = new BABYLON.Scene(engine);
 
+
     //--------------------------------------------------------------------------------
     // 準備
     var gridSize = { width: 20, height: 10 };
@@ -42,6 +43,9 @@ document.addEventListener("DOMContentLoaded", function() {
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
+    // AdvancedDynamicTextureを作成
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
 
     //--------------------------------------------------------------------------------
     // シーン構成
@@ -63,13 +67,15 @@ document.addEventListener("DOMContentLoaded", function() {
     for (let y = 0; y < gridSize.height; y++) {
         for (let x = 0; x < gridSize.width; x++) {
             if (floorData[y][x] === 1) {
-                let box = BABYLON.MeshBuilder.CreateBox(`box_${x}_${y}`, { size: boxSize }, scene);
+                let box = BABYLON.MeshBuilder.CreateBox(`box_${x}_${y}`, { size: boxSize*0.9 }, scene);
                 box.position.x = x * boxSize;
                 box.position.y = 0;
                 box.position.z = y * boxSize;
                 box.material = new BABYLON.StandardMaterial(`mat_${x}_${y}`, scene);
                 box.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
-                var edgeRenderer = new BABYLON.EdgesRenderer(box, 1.0, BABYLON.Color3.White(), 1);
+                box.edgesWidth = 4.0;
+                box.edgesColor = new BABYLON.Color4(1, 1, 1, 0.5);
+                box.enableEdgesRendering(0.9999);
             }
         }
     }
@@ -77,21 +83,20 @@ document.addEventListener("DOMContentLoaded", function() {
     // ロボットの定義
     var robots = [];
     for (let i = 0; i < 10; i++) {
-        let robot = BABYLON.MeshBuilder.CreateBox(`robot_${i}`, { size: boxSize }, scene);
-        robot.position.x = i * boxSize;
-        robot.position.y = boxSize / 2; // 上に少し浮かせる
-        robot.position.z = i * boxSize;
+        let robot = BABYLON.MeshBuilder.CreateBox(`robot_${i}`, { size: boxSize*0.9 }, scene);
+        robot.position.x = getRandomInt(0,19) * boxSize;
+        robot.position.y = boxSize * 1.1; // 上に少し浮かせる
+        robot.position.z = getRandomInt(0,10) * boxSize;
         robot.material = new BABYLON.StandardMaterial(`robotMat_${i}`, scene);
         robot.material.diffuseColor = new BABYLON.Color3(1, 0, 0);
-        var edgeRenderer = new BABYLON.EdgesRenderer(robot, 1.0, BABYLON.Color3.White(), 1);
+        robot.edgesWidth = 4.0;
+        robot.edgesColor = new BABYLON.Color4(1, 1, 1, 0.5);
+        robot.enableEdgesRendering(0.9999);
         robots.push(robot);
     }
 
     //--------------------------------------------------------------------------------
     // 2D UI
-
-    // AdvancedDynamicTextureを作成
-    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
 
     // スライダの定義
@@ -190,25 +195,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     // 使用例: console.logの代わりにupdateOutputを使用してテキストを更新
-    updateOutput("New message for display in 3D space!");
-
-    var currentSecond = 0;
-    var isAnimating = false;
-
-    startButton.onclick = function() {
-        if (isAnimating) return;
-        isAnimating = true;
-        animateRobots();
-    };
-
-    stopButton.onclick = function() {
-        isAnimating = false;
-    };
-
-    timeSlider.oninput = function() {
-        currentSecond = parseInt(timeSlider.value);
-        // TODO: ロボットの位置をジャンプさせるロジックの実装
-    };
+    updateOutput("text!");
 
     //--------------------------------------------------------------------------------
     // Animation
@@ -229,7 +216,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 let dx = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
                 let dy = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
 
-                dataForCurrentSecond.data.push({
+                dataForCurrentSecond.push({
                     robotIndex: i,
                     dx: dx,
                     dy: dy
