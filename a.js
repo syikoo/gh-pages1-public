@@ -1,29 +1,3 @@
-const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
-// 左クリックイベントを追加
-handler.setInputAction(function(click) {
-    const pickedObject = viewer.scene.pick(click.position);
-    if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.polyline) {
-        const selectedEntity = pickedObject.id;
-
-        // クリックされたPolylineの中心位置を取得 (ここでは簡単のためPolylineの最初の点を使用)
-        const centerPosition = selectedEntity.polyline.positions.getValue()[0];
-
-        // クリックされたPolylineに関する情報やバルーンを表示
-        viewer.entities.add({
-            position: centerPosition,
-            label: {
-                text: 'クリックされたPolyline!',
-                fillColor: Cesium.Color.WHITE,
-                outlineColor: Cesium.Color.BLACK,
-                outlineWidth: 2,
-                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-            }
-        });
-    }
-}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
 
 
 // Cesiumのビューアーを初期化
