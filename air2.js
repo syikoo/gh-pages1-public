@@ -1,15 +1,13 @@
 // 1. Set up CesiumJS viewer with OpenStreetMap imagery
-const viewer = new Cesium.Viewer('cesiumContainer');
-/*
+//const viewer = new Cesium.Viewer('cesiumContainer');
 const viewer = new Cesium.Viewer('cesiumContainer', {
-    imageryProvider: 
-      new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/',
-        credit: 'OSM'
-      }),
-    baseLayerPicker: false
+    // OpenStreetMapの標準的な地図タイルを使用
+    /*imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/'
+    }),*/
+    baseLayerPicker: true, // ベースレイヤーのピッカーを非表示にする
+    //sceneMode: Cesium.SceneMode.SCENE2D // 2Dモードで表示
 });
-*/
 
 const airports = {
     "Hartsfield-Jackson": {
@@ -228,7 +226,7 @@ for (let airportName in airports) {
         },
         label: {
             text: airportName,
-            font: '12px sans-serif',  // フォントサイズとフォントファミリー
+            font: '10px sans-serif',  // フォントサイズとフォントファミリー
             verticalOrigin: Cesium.VerticalOrigin.TOP,
             pixelOffset: new Cesium.Cartesian2(0, 2)  // アイコンの上にラベルを表示
         }
@@ -236,11 +234,12 @@ for (let airportName in airports) {
 }
 
 function getRandomAirport() {
-    const airportNames = Object.keys(airportList);
+    const airportNames = Object.keys(airports);
     const randomName = airportNames[Math.floor(Math.random() * airportNames.length)];
-    const selectedAirport = airportList[randomName];
-    return selectedAirport.location;
+    const selectedAirport = airports[randomName];
+    return [selectedAirport.location[1],selectedAirport.location[0]];
 }
+
 function getRandomTimeHours() {
     return Math.floor(Math.random() * 24); // 0-23の間でランダムな時間を返す
 }
@@ -252,39 +251,71 @@ const numberOfRoutes = 10; // 生成するルートの数
 for (let i = 0; i < numberOfRoutes; i++) {
     const start = getRandomAirport();
     const end = getRandomAirport();
+    const heading = Cesium.Math.toRadians(Cesium.Cartesian3.angleBetween(Cesium.Cartesian3.fromDegrees(...start), Cesium.Cartesian3.fromDegrees(...end)));
 
     const timeStart = Cesium.JulianDate.addHours(Cesium.JulianDate.fromDate(new Date()), getRandomTimeHours(), new Cesium.JulianDate());
     const timeEnd = Cesium.JulianDate.addHours(timeStart, 2, new Cesium.JulianDate());
 
+    // ビルボードの追加
+    const vehicle = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(...start),
+        billboard: {
+            image: icon,
+            scale: 0.8,
+            rotation: -heading, // ビルボードの向きを修正
+            eyeOffset: new Cesium.Cartesian3(0, 0, -50) // ビルボードの位置を少し上にずらす
+        }
+    });
+
+    let key_frames = [ 
+        [timeStart, Cesium.Cartesian3.fromDegrees(...start)],
+        [timeStart, Cesium.Cartesian3.fromDegrees(...end)]
+    ];
+    const ROUTE_3D = true;
+    if (ROUTE_3D) {
+        function generateFlightPath(start, end, timeStart, timeEnd, height=5000, granularity = 0.05) {
+            const ellipsoid = Cesium.Ellipsoid.WGS84;
+            const startCartographic = Cesium.Cartographic.fromDegrees(...start);
+            const endCartographic = Cesium.Cartographic.fromDegrees(...end);
+            const geodesic = new Cesium.EllipsoidGeodesic(startCartographic, endCartographic);
+            const durationInSeconds = Cesium.JulianDate.secondsDifference(timeEnd, timeStart);
+            const timeInterval = durationInSeconds * granularity;
+        
+            const positions = [];
+            for (let i = 0; i <= 1; i += granularity) {
+                const cartographic = geodesic.interpolateUsingFraction(i);
+                const heightFactor = Math.sin(i * Math.PI); // 0から1から0へのサインカーブ
+                cartographic.height = heightFactor * height; // 中間点で上空m
+                const cart_position = ellipsoid.cartographicToCartesian(cartographic);
+                const time = Cesium.JulianDate.addSeconds(timeStart, i * durationInSeconds, new Cesium.JulianDate());
+                positions.push([time, cart_position, cartographic]);
+            }
+        
+            return positions;
+        }
+        key_frames = generateFlightPath(start, end, timeStart, timeEnd, 2000e3, 0.05);
+    }
+
+    const arc = key_frames.map(k=>[k[1].x,k[1].y,k[1].z]).flat();
+  console.log(arc);
     const route = viewer.entities.add({
         polyline: {
-            positions: Cesium.Cartesian3.fromDegreesArray([...start, ...end]),
-            width: 2,
-            material: Cesium.Color.RED,
+//            positions: Cesium.Cartesian3.fromDegreesArray([...start, ...end]),
+//            positions: Cesium.Cartesian3.fromDegreesArrayHeights([...arc]),
+            positions: key_frames.map(k=>k[1]),
+            width: 1,
+            material: Cesium.Color.GREY,
             show: true // 初期状態でルートを表示
         }
     });
-
     routes.push(route);
-
-    // ビルボードの追加
-    const vehicle = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(...startAirport),
-        billboard: {
-            image: icon,
-            scale: 0.5,
-            verticalOrigin: Cesium.VerticalOrigin.TOP
-        }
-    });
 
     // アニメーションの設定
     const sampledPosition = new Cesium.SampledPositionProperty();
-    sampledPosition.addSample(timeStart, Cesium.Cartesian3.fromDegrees(...startAirport));
-    sampledPosition.addSample(timeEnd, Cesium.Cartesian3.fromDegrees(...endAirport));
+    sampledPosition.addSample(timeStart, Cesium.Cartesian3.fromDegrees(...start));
+    sampledPosition.addSample(timeEnd, Cesium.Cartesian3.fromDegrees(...end));
+    key_frames.forEach(k => sampledPosition.addSample(k[0],k[1]));
     vehicle.position = sampledPosition;
-
-    const heading = Cesium.Math.toRadians(Cesium.Cartesian3.angleBetween(Cesium.Cartesian3.fromDegrees(...startAirport), Cesium.Cartesian3.fromDegrees(...endAirport)));
-    vehicle.orientation = Cesium.Transforms.headingPitchRollQuaternion(Cesium.Cartesian3.fromDegrees(...startAirport), new Cesium.HeadingPitchRoll(heading, 0, 0));
 }
 
 // ルートの表示/非表示を切り替える関数
