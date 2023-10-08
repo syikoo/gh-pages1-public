@@ -1,7 +1,9 @@
 <html>
     <body>
+        <div id="a">hello</div>
+        <div id="b">world</div>
         <script>
-            alert(process.env);
+            document.getElementById("b").innerHTML=process.env;
         </script>
     </body>
 </html>
