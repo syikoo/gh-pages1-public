@@ -1,0 +1,278 @@
+<html>
+    <head>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+	<canvas id="renderCanvas"></canvas>
+    <script>
+document.addEventListener("DOMContentLoaded", function() {
+    var canvas = document.getElementById("renderCanvas");
+    var engine = new BABYLON.Engine(canvas, true);
+    var scene = new BABYLON.Scene(engine);
+
+    // 背景色の設定
+    scene.clearColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+
+    // 光源の設定
+    new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
+
+    const FLOOR_WIDTH = 30;
+    const FLOOR_HEIGHT = 15;
+    const BOX_STEP = 1.0;
+    const BOX_SIZE = 0.9;
+    const ANIM_TICK_MSEC = 300;
+    const ANIM_MOVE_QUICK = 4.0;
+    const N_ROBOTS = 15;
+    const MAX_TIME = 120;
+
+    // カメラの設定
+    var cameraTarget = new BABYLON.Vector3(FLOOR_WIDTH * BOX_SIZE / 2, 0, FLOOR_HEIGHT * BOX_SIZE / 2);
+    var camera = new BABYLON.ArcRotateCamera("Camera", 85*Math.PI / 180, Math.PI / 4, 50, cameraTarget, scene);
+    camera.attachControl(canvas, true);
+
+    // --------------------------------------------------------------------------
+    // 初期配置
+
+    // 床の定義
+    var gridSize = { width: FLOOR_WIDTH, height: FLOOR_HEIGHT };
+    var floorData = new Array(gridSize.height).fill(0).map(() => new Array(gridSize.width).fill(1));
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    for (let y = 0; y < gridSize.height; y++) {
+        for (let x = 0; x < gridSize.width; x++) {
+            if (floorData[y][x] === 1) {
+                let box = BABYLON.MeshBuilder.CreateBox(`box_${x}_${y}`, { size: BOX_SIZE }, scene);
+                box.position.x = x * BOX_STEP;
+                box.position.y = 0;
+                box.position.z = y * BOX_STEP;
+                box.material = new BABYLON.StandardMaterial(`mat_${x}_${y}`, scene);
+                box.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
+
+                box.enableEdgesRendering();
+                box.edgesWidth = 4.0;
+                box.edgesColor = new BABYLON.Color4(1, 1, 1, 0.5);
+            }
+        }
+    }
+
+    // ロボットの定義
+    var robots = [];
+    for (let i = 0; i < N_ROBOTS; i++) {
+        let robot = BABYLON.MeshBuilder.CreateBox(`robot_${i}`, { size: BOX_SIZE }, scene);
+        robot.position.x = getRandomInt(0,FLOOR_WIDTH-1) * BOX_STEP;
+        robot.position.y = BOX_SIZE * 1.1; // 上に少し浮かせる
+        robot.position.z = getRandomInt(0, FLOOR_HEIGHT-1) * BOX_STEP;
+        robot.material = new BABYLON.StandardMaterial(`robotMat_${i}`, scene);
+        robot.material.diffuseColor = new BABYLON.Color3(1, 0, 0);
+
+        robot.enableEdgesRendering();
+        robot.edgesWidth = 4.0;
+        robot.edgesColor = new BABYLON.Color4(1, 1, 1, 0.5);
+
+        robots.push(robot);
+    }
+
+    // --------------------------------------------------------------------------
+    // 2D UI構築
+
+    // AdvancedDynamicTextureを作成
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    // スライダーを作成
+    var slider = new BABYLON.GUI.Slider();
+    slider.minimum = 0;
+    slider.maximum = MAX_TIME;  // 0からT秒
+    slider.value = 0;
+    slider.height = "20px";
+    slider.width = "200px";
+    slider.top = "-40px"
+    slider.color = "green";
+    slider.background = "black";
+    slider.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    slider.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    slider.isPointerBlocker = true;
+    // AdvancedDynamicTextureにスライダーを追加
+    advancedTexture.addControl(slider);
+
+    // 開始ボタンの定義
+    var startButton = BABYLON.GUI.Button.CreateSimpleButton("startButton", "Start");
+    startButton.width = 0.1;
+    startButton.height = "30px";
+    startButton.color = "white";
+    startButton.background = "green";
+    startButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    startButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    startButton.isPointerBlocker = true;
+    advancedTexture.addControl(startButton);
+
+    // 終了ボタンの定義
+    var endButton = BABYLON.GUI.Button.CreateSimpleButton("endButton", "End");
+    endButton.width = 0.1;
+    endButton.height = "30px";
+    endButton.color = "white";
+    endButton.background = "red";
+    endButton.top = "40px";
+    endButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    endButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    endButton.isPointerBlocker = true;
+    advancedTexture.addControl(endButton);
+
+    // TextBlockを作成してテキストを設定
+    var outputText = new BABYLON.GUI.TextBlock();
+    outputText.text = "Initial Text";
+    outputText.color = "black";
+    outputText.fontSize = 24;
+    outputText.top = "-40%";  // 画面の上部にテキストを配置
+    advancedTexture.addControl(outputText);
+
+    // あるイベントや操作に応じてテキストを更新する関数
+    function consoleLog3D(message) {
+        outputText.text = message;
+    }
+
+    // 使用例: console.logの代わりにconsoleLog3Dを使用してテキストを更新
+    consoleLog3D("sample to update text");
+
+    // --------------------------------------------------------------------------
+    // イベント処理
+
+    var currentSecond = 0;
+    var lastSecond = -1;
+    var isAnimating = false;
+
+    // 開始・終了機能
+    var intervalId = null;
+    function start_animation() {
+        // 既存のインターバルがあればクリア
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+        intervalId = setInterval(function() {
+            slider.value += 1;
+            if (slider.value >= MAX_TIME) {
+                clearInterval(intervalId);  // T秒に達したらインターバルを停止
+            }
+        }, ANIM_TICK_MSEC);  // x秒ごとに更新
+
+        if (isAnimating) return;
+        isAnimating = true;
+    }
+    startButton.onPointerUpObservable.add(start_animation);
+
+    function stop_animation() {
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+        slider.value = 0;  // スライダの値をリセット
+        isAnimating = false;
+    }
+    endButton.onPointerUpObservable.add(stop_animation);
+
+    function change_animation_time(timePosition) {
+        currentSecond = parseInt(slider.value);
+        if (currentSecond != lastSecond) {
+            consoleLog3D("Time position changed to:", timePosition, "seconds");
+
+            moveToTime(currentSecond);
+            lastSecond = currentSecond;
+        }
+    }
+    slider.onValueChangedObservable.add(function(value){
+        var timePosition = value;  // スライダの値 = 時間の位置（秒数）
+        change_animation_time(timePosition);
+    });
+
+    // --------------------------------------------------------------------------
+    // ロボットの移動
+
+    // ダミーデータ
+    function generateDummyMoveData() {
+        //const possibleDeltas = [-2, -1, 0, 1, 2];
+        const possibleDeltas = [-1, 0, 1];
+    
+        let moveData = {};
+    
+        for (let t = 0; t <= MAX_TIME; t++) {
+            let dataForCurrentSecond = [];
+    
+            for (let i = 0; i < N_ROBOTS; i++) {
+                let dx = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
+                let dy = possibleDeltas[getRandomInt(0, possibleDeltas.length - 1)];
+    
+                dataForCurrentSecond.push({
+                    robotIndex: i,
+                    dx: dx,
+                    dy: dy
+                });
+            }
+    
+            moveData[t] = dataForCurrentSecond;
+        }
+    
+        return moveData;
+    } 
+
+    var robotMoves = generateDummyMoveData();
+
+    function moveToTime(t) {
+        let movesForCurrentSecond = robotMoves[t];
+        if (movesForCurrentSecond) {
+            movesForCurrentSecond.forEach(move => {
+                let robot = robots[move.robotIndex];
+                let dx = move.dx;
+                if (robot.position.x + dx * BOX_STEP < 0 || 
+                    robot.position.x + dx * BOX_STEP >= FLOOR_WIDTH * BOX_STEP)
+                    dx = 0;
+                let dy = move.dy;
+                if (robot.position.z + dy * BOX_STEP < 0 || 
+                    robot.position.z + dy * BOX_STEP >= FLOOR_HEIGHT * BOX_STEP)
+                    dy = 0;
+                if (dx != 0 || dy != 0)
+                    moveRobotWithAnimation(robot, dx * BOX_STEP, dy * BOX_STEP);
+            });
+        }
+    }
+
+    const FRAME_PER_SEC = 30;
+    function moveRobotWithAnimation(robot, dx, dy) {
+        let animX = new BABYLON.Animation("animX", "position.x", FRAME_PER_SEC, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        let animZ = new BABYLON.Animation("animZ", "position.z", FRAME_PER_SEC, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+    
+        let initialX = robot.position.x;
+        let initialZ = robot.position.z;
+    
+        let keysX = [];
+        keysX.push({ frame: 0, value: initialX });
+        keysX.push({ frame: 1*FRAME_PER_SEC, value: initialX + dx });
+    
+        let keysZ = [];
+        keysZ.push({ frame: 0, value: initialZ });
+        keysZ.push({ frame: 1*FRAME_PER_SEC, value: initialZ + dy });
+    
+        animX.setKeys(keysX);
+        animZ.setKeys(keysZ);
+    
+        robot.animations = [];
+        robot.animations.push(animX, animZ);
+        scene.beginAnimation(robot, 0, FRAME_PER_SEC, false, ANIM_MOVE_QUICK);
+    }
+
+    start_animation();
+    
+    engine.runRenderLoop(function() {
+        scene.render();
+    });
+
+    window.addEventListener("resize", function() {
+        engine.resize();
+    });
+
+});
+
+    </script>
+</body>
