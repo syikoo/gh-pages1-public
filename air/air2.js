@@ -256,27 +256,46 @@ for (let i = 0; i < numberOfRoutes; i++) {
     const timeStart = Cesium.JulianDate.addHours(Cesium.JulianDate.fromDate(new Date()), getRandomTimeHours(), new Cesium.JulianDate());
     const timeEnd = Cesium.JulianDate.addHours(timeStart, 2, new Cesium.JulianDate());
 
-    // ビルボードの追加
-    const icon_plane = "b787.glb";
-    const vehicle = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(...start),
-        /*billboard: {
-            image: icon,
-            scale: 0.8,
-            rotation: -heading, // ビルボードの向きを修正
-            eyeOffset: new Cesium.Cartesian3(0, 0, -50) // ビルボードの位置を少し上にずらす
-        }*/
-        mode: {
-            url: icon_plane
-        }
-    });
+    const VIEW_3D = true;
+    let vihecle = null;
+    if (!VIEW_3D) { 
+      // ビルボードの追加
+      const vehicle = viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(...start),
+          billboard: {
+              image: icon,
+              scale: 0.8,
+              rotation: -heading, // ビルボードの向きを修正
+              eyeOffset: new Cesium.Cartesian3(0, 0, -50) // ビルボードの位置を少し上にずらす
+          }
+        });
+    }
+    else
+    {
+      var pitch = 0;
+      var roll = 0;
+
+      let p = Cesium.Cartesian3.fromDegrees(...start);
+      var hpr = new Cesium.HeadiangPitchRoll(heading, pitch, roll);
+      var orientation = Cesium.Transforms.headingPitchRollQuaternion(p, hpr);
+
+      // ビルボードの追加
+      const icon_plane = "https://syikoo.github.io/gh-pages1-public/air/b787.glb";
+      const vehicle = viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(...start),
+          model: {
+              uri: icon_plane,
+              scale: 300000
+          },
+          orientation: orientation
+      });
+    }
 
     let key_frames = [ 
         [timeStart, Cesium.Cartesian3.fromDegrees(...start)],
         [timeStart, Cesium.Cartesian3.fromDegrees(...end)]
     ];
-    const ROUTE_3D = true;
-    if (ROUTE_3D) {
+    if (VIEW_3D) {
         function generateFlightPath(start, end, timeStart, timeEnd, height=5000, granularity = 0.05) {
             const ellipsoid = Cesium.Ellipsoid.WGS84;
             const startCartographic = Cesium.Cartographic.fromDegrees(...start);
@@ -301,7 +320,6 @@ for (let i = 0; i < numberOfRoutes; i++) {
     }
 
     const arc = key_frames.map(k=>[k[1].x,k[1].y,k[1].z]).flat();
-  console.log(arc);
     const route = viewer.entities.add({
         polyline: {
 //            positions: Cesium.Cartesian3.fromDegreesArray([...start, ...end]),
