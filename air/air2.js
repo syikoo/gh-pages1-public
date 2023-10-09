@@ -208,7 +208,7 @@ const airports = {
     "Quito": {
         location: [-0.1292, -78.3575],
         code: "UIO",
-        long_name: "Mariscal Sucre International Airport"
+      long_name: "Mariscal Sucre International Airport"
     }
 };
 
@@ -257,13 +257,17 @@ for (let i = 0; i < numberOfRoutes; i++) {
     const timeEnd = Cesium.JulianDate.addHours(timeStart, 2, new Cesium.JulianDate());
 
     // ビルボードの追加
+    const icon_plane = "b787.glb";
     const vehicle = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(...start),
-        billboard: {
+        /*billboard: {
             image: icon,
             scale: 0.8,
             rotation: -heading, // ビルボードの向きを修正
             eyeOffset: new Cesium.Cartesian3(0, 0, -50) // ビルボードの位置を少し上にずらす
+        }*/
+        mode: {
+            url: icon_plane
         }
     });
 
