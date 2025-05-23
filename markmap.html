@@ -11,7 +11,7 @@
     (function() {
       const { Markmap, Transformer } = window.markmap;
       // To use your own markdown, replace the 'markdownString' variable content with your markdown.
-      const markdownString = '# Mindmap\\n\\n## Branch 1\\n\\n- Item A\\n- Item B\\n\\n## Branch 2\\n\\n- Item C\\n- Item D';
+      const markdownString = '# My Awesome Mindmap\\n\\n## Level 1: Topic A\\n### Level 2: Sub-topic A1\\n- Level 3: Detail A1a\\n  - Level 4: Sub-detail A1a-i\\n    - Level 5: Deepest A1a-i-alpha\\n- Level 3: Detail A1b\\n### Level 2: Sub-topic A2\\n- Level 3: Detail A2a\\n\\n## Level 1: Topic B\\n### Level 2: Sub-topic B1\\n- Level 3: Detail B1a\\n- Level 3: Detail B1b\\n  - Level 4: Sub-detail B1b-i\\n### Level 2: Sub-topic B2\\n- Level 3: Detail B2a';
       const svgElement = document.getElementById('markmap');
       const transformer = new Transformer();
       const { root: data } = transformer.transform(markdownString);
