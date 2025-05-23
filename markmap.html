@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Markmap</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.2.7/dist/index.min.js"></script>
+</head>
+<body>
+  <svg id="markmap" style="width: 800px; height: 600px"></svg>
+  <script>
+    (function() {
+      const { Markmap, Transformer } = window.markmap;
+      // To use your own markdown, replace the 'markdownString' variable content with your markdown.
+      const markdownString = '# Mindmap\\n\\n## Branch 1\\n\\n- Item A\\n- Item B\\n\\n## Branch 2\\n\\n- Item C\\n- Item D';
+      const svgElement = document.getElementById('markmap');
+      const transformer = new Transformer();
+      const { root: data } = transformer.transform(markdownString);
+      Markmap.create(svgElement, null, data);
+    })();
+  </script>
+</body>
+</html>
